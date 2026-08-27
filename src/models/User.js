@@ -3,25 +3,25 @@ const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema(
   {
-    firstName: { 
-      type: String, 
+    firstName: {
+      type: String,
       required: [true, 'El nombre es obligatorio'],
-      trim: true 
+      trim: true
     },
-    lastName: { 
-      type: String, 
+    lastName: {
+      type: String,
       required: [true, 'El apellido es obligatorio'],
-      trim: true 
+      trim: true
     },
-    email: { 
-      type: String, 
-      required: [true, 'El email es obligatorio'], 
-      unique: true, 
+    email: {
+      type: String,
+      required: [true, 'El email es obligatorio'],
+      unique: true,
       lowercase: true,
       trim: true
     },
-    password: { 
-      type: String, 
+    password: {
+      type: String,
       required: [true, 'La contraseña es obligatoria'],
       minlength: [6, 'La contraseña debe tener al menos 6 caracteres']
     },
@@ -30,16 +30,16 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'staff', 'player', 'user'],
       default: 'user'
     },
-    isActive: { 
-      type: Boolean, 
-      default: true 
+    isActive: {
+      type: Boolean,
+      default: true
     }
-  }, 
+  },
   { timestamps: true }
 );
 
 // Middleware para encriptar la contraseña antes de guardar el usuario
-userSchema.pre('save', async function() {
+userSchema.pre('save', async function () {
   // Solo hashear si la contraseña ha sido modificada (o es nueva)
   if (!this.isModified('password')) {
     return;
@@ -51,7 +51,7 @@ userSchema.pre('save', async function() {
 });
 
 // Metodo para comparar contraseñas en el login
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
