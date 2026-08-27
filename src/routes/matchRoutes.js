@@ -6,11 +6,17 @@ const {
   getMatches,
   getMatchById,
   updateMatch,
-  deleteMatch
+  deleteMatch,
+  getUpcomingMatches,
+  getLatestResults
 } = require('../controllers/matchController');
 
 // Middlewares de autenticación
 const { protect, admin } = require('../middlewares/authMiddleware');
+
+// Rutas estáticas específicas (Deben ir siempre antes de las rutas con :id)
+router.get('/upcoming', getUpcomingMatches);
+router.get('/latest-results', getLatestResults);
 
 // Rutas base: /api/matches
 router.route('/')
