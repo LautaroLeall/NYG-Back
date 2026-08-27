@@ -38,8 +38,15 @@ app.get('/health', (req, res) => {
 // Montaje de rutas de la API
 const authRoutes = require('./routes/authRoutes');
 const newsRoutes = require('./routes/newsRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Servir la carpeta de imágenes estáticamente
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Middleware para rutas no encontradas (404)
 app.use((req, res, next) => {
