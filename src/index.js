@@ -37,7 +37,9 @@ app.get('/health', (req, res) => {
 
 // Montaje de rutas de la API
 const authRoutes = require('./routes/authRoutes');
+const newsRoutes = require('./routes/newsRoutes');
 app.use('/api/auth', authRoutes);
+app.use('/api/news', newsRoutes);
 
 // Middleware para rutas no encontradas (404)
 app.use((req, res, next) => {

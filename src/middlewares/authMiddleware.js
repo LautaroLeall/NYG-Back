@@ -43,7 +43,23 @@ const admin = (req, res, next) => {
   }
 };
 
+// Middleware para extraer el usuario si hay un token válido, pero NO falla si no hay token.
+// Útil para rutas públicas donde un admin tiene privilegios extra (ej. ver posts no publicados).
+const protectOptional = async (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      // Ignorar errores (token expirado o inválido), simplemente no seteamos req.user
+    }
+  }
+  next();
+};
+
 module.exports = {
   protect,
-  admin
+  admin,
+  protectOptional
 };
