@@ -96,7 +96,21 @@ const login = async (req, res, next) => {
   }
 };
 
+// @desc    Logout de usuario / eliminar cookie
+// @route   POST /api/auth/logout
+// @access  Public
+const logout = (req, res) => {
+  // Sobreescribimos la cookie con una que expira inmediatamente
+  res.cookie('jwt_refresh', '', {
+    httpOnly: true,
+    expires: new Date(0)
+  });
+  
+  res.status(200).json({ message: 'Sesión cerrada exitosamente' });
+};
+
 module.exports = {
   register,
-  login
+  login,
+  logout
 };
