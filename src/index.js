@@ -39,10 +39,12 @@ app.get('/health', (req, res) => {
 const authRoutes = require('./routes/authRoutes');
 const newsRoutes = require('./routes/newsRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const matchRoutes = require('./routes/matchRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/matches', matchRoutes);
 
 // Servir la carpeta de imágenes estáticamente
 const path = require('path');
