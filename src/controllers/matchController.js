@@ -20,12 +20,11 @@ const createMatch = async (req, res, next) => {
 // @access  Public
 const getMatches = async (req, res, next) => {
   try {
-    const { status, limit = 10, page = 1 } = req.query;
+    const { status, competition, limit = 10, page = 1 } = req.query;
 
     let query = {};
-    if (status) {
-      query.status = status;
-    }
+    if (status) query.status = status;
+    if (competition) query.competition = competition;
 
     const matches = await Match.find(query)
       .sort({ date: -1 })
@@ -120,10 +119,50 @@ const deleteMatch = async (req, res, next) => {
   }
 };
 
+// @desc    Obtener próximos partidos (Fixture)
+// @route   GET /api/matches/upcoming
+// @access  Public
+const getUpcomingMatches = async (req, res, next) => {
+  try {
+    const matches = await Match.find({ status: 'Programado' })
+      .sort({ date: 1 })
+      .limit(5);
+
+    res.status(200).json({
+      success: true,
+      count: matches.length,
+      data: matches
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Obtener últimos resultados
+// @route   GET /api/matches/latest-results
+// @access  Public
+const getLatestResults = async (req, res, next) => {
+  try {
+    const matches = await Match.find({ status: 'Finalizado' })
+      .sort({ date: -1 })
+      .limit(5);
+
+    res.status(200).json({
+      success: true,
+      count: matches.length,
+      data: matches
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createMatch,
   getMatches,
   getMatchById,
   updateMatch,
-  deleteMatch
+  deleteMatch,
+  getUpcomingMatches,
+  getLatestResults
 };
