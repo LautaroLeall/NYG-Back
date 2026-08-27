@@ -35,7 +35,9 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'API funcionando correctamente' });
 });
 
-// Aca iremos montando el resto de las rutas (api/auth, api/club, api/players, etc.)
+// Montaje de rutas de la API
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
 
 // Middleware para rutas no encontradas (404)
 app.use((req, res, next) => {
