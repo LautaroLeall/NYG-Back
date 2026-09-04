@@ -21,9 +21,8 @@ router.post('/', protect, admin, (req, res, next) => {
       return next(error);
     }
 
-    // Si todo salió bien, devolver la ruta relativa de la imagen guardada
-    // Se reemplaza \ por / para estandarizar las rutas en Windows
-    const imagePath = `/${req.file.path.replace(/\\/g, '/')}`;
+    // Si usamos Cloudinary, req.file.path ya trae la URL alojada en la nube
+    const imagePath = req.file.path;
 
     res.status(200).json({
       success: true,
