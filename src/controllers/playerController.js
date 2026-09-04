@@ -5,6 +5,32 @@ const Player = require('../models/Player');
 // @access  Private/Admin
 const createPlayer = async (req, res, next) => {
   try {
+    const { name, category, position } = req.body;
+
+    if (!name || name.trim() === '') {
+      const error = new Error('El nombre completo es obligatorio');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!position || position.trim() === '') {
+      const error = new Error('La posición en el campo es obligatoria');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check for duplicate player in the same category
+    const existingPlayer = await Player.findOne({
+      name: name.trim(),
+      category: category || 'Primera'
+    });
+
+    if (existingPlayer) {
+      const error = new Error(`El jugador "${name.trim()}" ya existe en la categoría ${category || 'Primera'}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
     const player = await Player.create(req.body);
     res.status(201).json({
       success: true,
@@ -78,12 +104,39 @@ const getPlayerById = async (req, res, next) => {
 // @access  Private/Admin
 const updatePlayer = async (req, res, next) => {
   try {
+    const { name, category, position } = req.body;
     let player = await Player.findById(req.params.id);
 
     if (!player) {
       const error = new Error('Jugador no encontrado');
       error.statusCode = 404;
       throw error;
+    }
+
+    if (position !== undefined && position.trim() === '') {
+      const error = new Error('La posición en el campo es obligatoria');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (name) {
+      if (name.trim() === '') {
+        const error = new Error('El nombre completo no puede estar vacío');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const existingPlayer = await Player.findOne({
+        name: name.trim(),
+        category: category || player.category,
+        _id: { $ne: req.params.id }
+      });
+
+      if (existingPlayer) {
+        const error = new Error(`El jugador "${name.trim()}" ya existe en la categoría ${category || player.category}`);
+        error.statusCode = 400;
+        throw error;
+      }
     }
 
     player = await Player.findByIdAndUpdate(req.params.id, req.body, {

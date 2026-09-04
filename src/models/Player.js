@@ -29,8 +29,8 @@ const playerSchema = new mongoose.Schema({
   category: {
     type: String,
     enum: [
-      'Plantel Superior',
-      'Reserva',
+      'Primera',
+      'Intermedia',
       'Pre-Intermedia',
       'M19',
       'M17',
@@ -39,7 +39,7 @@ const playerSchema = new mongoose.Schema({
       'Infantiles',
       'Staff'
     ],
-    default: 'Plantel Superior',
+    default: 'Primera',
     required: true,
   },
   isActive: {
