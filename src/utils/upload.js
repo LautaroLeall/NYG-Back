@@ -1,53 +1,31 @@
 const multer = require('multer');
 const path = require('path');
+const { v2: cloudinary } = require('cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const fs = require('fs');
 
-// Asegurarse de que el directorio uploads exista
-const uploadDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Configuración de Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-// Configuración del almacenamiento (Disk Storage)
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, 'uploads/'); // Directorio raíz del backend/uploads/
-  },
-  filename(req, file, cb) {
-    // Generar nombre de archivo único: campo-timestamp.extension
-    cb(
-      null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-    );
+// Configurar almacenamiento en Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'nyg-rugby', // Carpeta dentro de Cloudinary
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+    transformation: [{ width: 800, height: 800, crop: 'limit' }], // Redimensionar si es muy grande
   },
 });
 
-// Filtro para aceptar únicamente imágenes
-function checkFileType(file, cb) {
-  // Expresión regular con las extensiones permitidas
-  const filetypes = /jpg|jpeg|png|webp|gif/;
-
-  // Verificar la extensión
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-
-  // Verificar el MIME type
-  const mimetype = filetypes.test(file.mimetype);
-
-  if (extname && mimetype) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Solo se permiten subir imágenes (jpg, jpeg, png, webp, gif)'));
-  }
-}
-
 // Configuración final de Multer
 const upload = multer({
-  storage,
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
-  },
+  storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // Limite de tamaño: 5MB
+    fileSize: 5 * 1024 * 1024 // Límite de tamaño: 5MB
   }
 });
 
