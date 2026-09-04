@@ -16,7 +16,14 @@ connectDB();
 // Middlewares globales (BE-004)
 app.use(helmet()); // Seguridad HTTP headers
 app.use(cors({
-  origin: env.FRONTEND_URL,
+  origin: function (origin, callback) {
+    const allowedOrigins = [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true // Permite envío de cookies para el refresh token
 }));
 app.use(express.json({ limit: '10mb' })); // Body parser
@@ -41,12 +48,20 @@ const newsRoutes = require('./routes/newsRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const matchRoutes = require('./routes/matchRoutes');
 const playerRoutes = require('./routes/playerRoutes');
+const teamRoutes = require('./routes/teamRoutes');
+const tournamentRoutes = require('./routes/tournamentRoutes');
+const statsRoutes = require('./routes/statsRoutes');
+const standingsRoutes = require('./routes/standingsRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/players', playerRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/standings', standingsRoutes);
 
 // Servir la carpeta de imágenes estáticamente
 const path = require('path');
