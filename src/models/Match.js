@@ -1,41 +1,45 @@
 const mongoose = require('mongoose');
 
 const matchSchema = new mongoose.Schema({
-  competition: {
-    type: String,
-    required: [true, 'La competición es obligatoria'],
-    trim: true,
+  tournament: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tournament',
+    required: [true, 'El torneo es obligatorio']
   },
   homeTeam: {
-    type: String,
-    required: [true, 'El equipo local es obligatorio'],
-    trim: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    required: [true, 'El equipo local es obligatorio']
   },
   awayTeam: {
-    type: String,
-    required: [true, 'El equipo visitante es obligatorio'],
-    trim: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    required: [true, 'El equipo visitante es obligatorio']
   },
   date: {
     type: Date,
     required: [true, 'La fecha del partido es obligatoria'],
   },
-  homeScore: {
-    type: Number,
-    default: 0,
-  },
-  awayScore: {
-    type: Number,
-    default: 0,
-  },
+  homeScore: { type: Number, default: 0 },
+  awayScore: { type: Number, default: 0 },
+  homeTries: { type: Number, default: 0 },
+  awayTries: { type: Number, default: 0 },
+  homeConversions: { type: Number, default: 0 },
+  awayConversions: { type: Number, default: 0 },
+  homePenalties: { type: Number, default: 0 },
+  awayPenalties: { type: Number, default: 0 },
+  homeDrops: { type: Number, default: 0 },
+  awayDrops: { type: Number, default: 0 },
+  homePenaltyTries: { type: Number, default: 0 },
+  awayPenaltyTries: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: ['Programado', 'En Curso', 'Finalizado'],
+    enum: ['Programado', 'En Curso', 'Finalizado', 'Postergado', 'Walkover'],
     default: 'Programado',
   },
   isHomeMatch: {
     type: Boolean,
-    default: true, // Indica si Natación y Gimnasia juega de local
+    default: true,
   }
 }, {
   timestamps: true
