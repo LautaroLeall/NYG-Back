@@ -20,13 +20,14 @@ const createMatch = async (req, res, next) => {
 // @access  Public
 const getMatches = async (req, res, next) => {
   try {
-    const { status, competition, limit = 10, page = 1 } = req.query;
+    const { status, tournament, limit = 10, page = 1 } = req.query;
 
     let query = {};
     if (status) query.status = status;
-    if (competition) query.competition = competition;
+    if (tournament) query.tournament = tournament;
 
     const matches = await Match.find(query)
+      .populate('tournament homeTeam awayTeam')
       .sort({ date: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -51,7 +52,7 @@ const getMatches = async (req, res, next) => {
 // @access  Public
 const getMatchById = async (req, res, next) => {
   try {
-    const match = await Match.findById(req.params.id);
+    const match = await Match.findById(req.params.id).populate('tournament homeTeam awayTeam');
 
     if (!match) {
       const error = new Error('Partido no encontrado');
@@ -125,6 +126,7 @@ const deleteMatch = async (req, res, next) => {
 const getUpcomingMatches = async (req, res, next) => {
   try {
     const matches = await Match.find({ status: 'Programado' })
+      .populate('tournament homeTeam awayTeam')
       .sort({ date: 1 })
       .limit(5);
 
@@ -144,6 +146,7 @@ const getUpcomingMatches = async (req, res, next) => {
 const getLatestResults = async (req, res, next) => {
   try {
     const matches = await Match.find({ status: 'Finalizado' })
+      .populate('tournament homeTeam awayTeam')
       .sort({ date: -1 })
       .limit(5);
 
