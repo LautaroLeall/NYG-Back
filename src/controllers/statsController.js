@@ -2,6 +2,24 @@ const MatchStats = require('../models/MatchStats');
 const Player = require('../models/Player');
 const Match = require('../models/Match');
 
+// @desc    Obtener estadísticas de un partido específico
+// @route   GET /api/matches/:id/stats
+// @access  Private/Admin
+exports.getMatchStatsByMatchId = async (req, res, next) => {
+  try {
+    const matchId = req.params.id;
+
+    const stats = await MatchStats.find({ match: matchId })
+      .populate('player', 'name position category isActive imageUrl');
+
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // @desc    Cargar estadísticas de un partido completo (bulk insert/update)
 // @route   POST /api/matches/:id/stats
