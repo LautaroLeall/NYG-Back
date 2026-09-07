@@ -9,11 +9,10 @@ exports.getStandings = async (req, res, next) => {
   try {
     const { tournamentId } = req.params;
 
-    // Obtener el torneo con sus reglas
+    // Obtener las reglas del torneo
     const tournament = await Tournament.findById(tournamentId)
       .populate('pointsRule')
-      .populate('tiebreakRule')
-      .populate('teams');
+      .populate('tiebreakRule');
 
     if (!tournament) {
       return res.status(404).json({ success: false, error: 'Torneo no encontrado' });
