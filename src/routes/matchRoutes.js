@@ -11,7 +11,7 @@ const {
   getLatestResults
 } = require('../controllers/matchController');
 
-const { saveMatchStats } = require('../controllers/statsController');
+const { saveMatchStats, getMatchStatsByMatchId } = require('../controllers/statsController');
 
 // Middlewares de autenticación
 const { protect, admin } = require('../middlewares/authMiddleware');
@@ -32,6 +32,7 @@ router.route('/:id')
 
 // BE-061: Carga de estadísticas por partido
 router.route('/:id/stats')
+  .get(protect, admin, getMatchStatsByMatchId)
   .post(protect, admin, saveMatchStats);
 
 module.exports = router;
