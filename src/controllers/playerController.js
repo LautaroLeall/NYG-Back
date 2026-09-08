@@ -82,7 +82,8 @@ const getPlayers = async (req, res, next) => {
 // @access  Public
 const getPlayerById = async (req, res, next) => {
   try {
-    const player = await Player.findById(req.params.id);
+    const playerId = req.params.id;
+    const player = await Player.findById(playerId);
 
     if (!player) {
       const error = new Error('Jugador no encontrado');
@@ -90,9 +91,48 @@ const getPlayerById = async (req, res, next) => {
       throw error;
     }
 
+    const mongoose = require('mongoose');
+    const MatchStats = require('../models/MatchStats');
+
+    // Calcular estadísticas acumuladas
+    const statsAggr = await MatchStats.aggregate([
+      { $match: { player: new mongoose.Types.ObjectId(playerId) } },
+      {
+        $group: {
+          _id: null,
+          caps: { $sum: 1 },
+          tries: { $sum: '$tries' },
+          yellowCards: { $sum: '$yellowCards' },
+          redCards: { $sum: '$redCards' },
+          minutesPlayed: { $sum: '$minutesPlayed' }
+        }
+      }
+    ]);
+
+    let stats = {
+      caps: 0,
+      tries: 0,
+      yellowCards: 0,
+      redCards: 0,
+      minutesPlayed: 0
+    };
+
+    if (statsAggr.length > 0) {
+      stats = {
+        caps: statsAggr[0].caps,
+        tries: statsAggr[0].tries,
+        yellowCards: statsAggr[0].yellowCards,
+        redCards: statsAggr[0].redCards,
+        minutesPlayed: statsAggr[0].minutesPlayed
+      };
+    }
+
+    const playerData = player.toObject();
+    playerData.stats = stats;
+
     res.status(200).json({
       success: true,
-      data: player
+      data: playerData
     });
   } catch (error) {
     next(error);
