@@ -81,13 +81,36 @@ exports.saveMatchStats = async (req, res, next) => {
 // @access  Public
 exports.getRankings = async (req, res, next) => {
   try {
-    const { tipo = 'goleadores', limit = 25 } = req.query;
+    const { tipo = 'goleadores', limit = 25, tournamentId } = req.query;
+
+    const pipeline = [];
+
+    // Si pasaron un tournamentId, necesitamos filtrar los MatchStats por torneo
+    if (tournamentId && tournamentId !== 'Todos') {
+      const mongoose = require('mongoose');
+      pipeline.push({
+        $lookup: {
+          from: 'matches',
+          localField: 'match',
+          foreignField: '_id',
+          as: 'matchInfo'
+        }
+      });
+      pipeline.push({
+        $unwind: '$matchInfo'
+      });
+      pipeline.push({
+        $match: {
+          'matchInfo.tournament': new mongoose.Types.ObjectId(tournamentId)
+        }
+      });
+    }
 
     // Aquí usamos el aggregation framework de MongoDB (BE-062)
     // Agrupamos por jugador y sumamos los campos correspondientes.
 
     // Primero, hacemos el $group base que calcula las sumas.
-    const groupStage = {
+    pipeline.push({
       $group: {
         _id: '$player',
         totalTries: { $sum: '$tries' },
@@ -108,7 +131,7 @@ exports.getRankings = async (req, res, next) => {
           }
         }
       }
-    };
+    });
 
     let sortField = 'points';
 
@@ -121,26 +144,26 @@ exports.getRankings = async (req, res, next) => {
       default: sortField = 'points'; break;
     }
 
-    const sortStage = { $sort: { [sortField]: -1, _id: 1 } }; // Desempate por id
+    pipeline.push({ $sort: { [sortField]: -1, _id: 1 } }); // Desempate por id
+    pipeline.push({ $limit: parseInt(limit) });
 
-    const limitStage = { $limit: parseInt(limit) };
-
-    const lookupStage = {
+    pipeline.push({
       $lookup: {
         from: 'players', // nombre de la colección en la base de datos
         localField: '_id',
         foreignField: '_id',
         as: 'playerInfo'
       }
-    };
+    });
 
-    const unwindStage = {
+    pipeline.push({
       $unwind: '$playerInfo'
-    };
+    });
 
-    const projectStage = {
+    pipeline.push({
       $project: {
         _id: 1,
+        'playerInfo._id': 1,
         'playerInfo.name': 1,
         'playerInfo.position': 1,
         'playerInfo.imageUrl': 1,
@@ -155,16 +178,7 @@ exports.getRankings = async (req, res, next) => {
         // Proyectamos el valor principal basado en el tipo para facilidad del front
         value: `$${sortField}`
       }
-    };
-
-    const pipeline = [
-      groupStage,
-      sortStage,
-      limitStage,
-      lookupStage,
-      unwindStage,
-      projectStage
-    ];
+    });
 
     const results = await MatchStats.aggregate(pipeline);
 
