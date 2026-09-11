@@ -2,24 +2,27 @@ const express = require('express');
 const router = express.Router();
 
 const {
-  createNews,
   getNews,
+  getFeaturedNews,
+  getNewsBySlug,
   getNewsById,
+  createNews,
   updateNews,
   deleteNews
 } = require('../controllers/newsController');
 
-// Middlewares de autenticación
-const { protect, admin, protectOptional } = require('../middlewares/authMiddleware');
+// Proteccion de rutas admin
+const { protect } = require('../middlewares/authMiddleware');
 
-// Rutas base: /api/news
-router.route('/')
-  .get(protectOptional, getNews) // Público (detecta admin si está logueado)
-  .post(protect, admin, createNews); // Solo Admin
+// Rutas Públicas
+router.get('/', getNews);
+router.get('/destacadas', getFeaturedNews);
+router.get('/:slug', getNewsBySlug);
 
-router.route('/:id')
-  .get(protectOptional, getNewsById) // Público (detecta admin si está logueado)
-  .put(protect, admin, updateNews) // Solo Admin
-  .delete(protect, admin, deleteNews); // Solo Admin
+// Rutas Privadas (Admin)
+router.get('/admin/:id', protect, getNewsById);
+router.post('/', protect, createNews);
+router.put('/:id', protect, updateNews);
+router.delete('/:id', protect, deleteNews);
 
 module.exports = router;
