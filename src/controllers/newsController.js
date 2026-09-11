@@ -1,64 +1,63 @@
 const News = require('../models/News');
 
-// @desc    Crear una noticia
-// @route   POST /api/news
-// @access  Private/Admin
-const createNews = async (req, res, next) => {
-  try {
-    const { title, content, excerpt, imageUrl, category, isPublished } = req.body;
-
-    const news = await News.create({
-      title,
-      content,
-      excerpt,
-      imageUrl,
-      category,
-      isPublished,
-      author: req.user._id // Obtenido del token por el middleware
-    });
-
-    res.status(201).json({
-      success: true,
-      data: news
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Obtener todas las noticias (con paginación opcional)
+// @desc    Get all news
 // @route   GET /api/news
 // @access  Public
-const getNews = async (req, res, next) => {
+exports.getNews = async (req, res, next) => {
   try {
-    const { limit = 10, page = 1, category, all } = req.query;
+    const { category, discipline, isFeatured, allStatus, page = 1, limit = 10 } = req.query;
 
-    // Por defecto, muestra solo publicadas
-    let query = { isPublished: true };
+    // Construir query de filtros
+    let query = {};
 
-    // Si es administrador y pasa ?all=true, muestra todas
-    if (all && req.user && req.user.role === 'admin') {
-      query = {};
+    // Por defecto solo trae las publicadas, a menos que se pida expresamente (para Admin)
+    if (allStatus !== 'true') {
+      query.isPublished = true;
     }
 
     if (category) {
       query.category = category;
     }
 
-    const news = await News.find(query)
-      .populate('author', 'name email')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    if (discipline) {
+      query.discipline = discipline;
+    }
 
+    if (isFeatured !== undefined) {
+      query.isFeatured = isFeatured === 'true';
+    }
+
+    // Paginación
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const startIndex = (pageNum - 1) * limitNum;
     const total = await News.countDocuments(query);
+
+    const news = await News.find(query)
+      .sort({ publishDate: -1 })
+      .skip(startIndex)
+      .limit(limitNum);
+
+    // Pagination result
+    const pagination = {};
+    if (startIndex + limitNum < total) {
+      pagination.next = {
+        page: pageNum + 1,
+        limit: limitNum
+      };
+    }
+    if (startIndex > 0) {
+      pagination.prev = {
+        page: pageNum - 1,
+        limit: limitNum
+      };
+    }
 
     res.status(200).json({
       success: true,
       count: news.length,
+      pagination,
       total,
-      totalPages: Math.ceil(total / limit),
-      currentPage: Number(page),
       data: news
     });
   } catch (error) {
@@ -66,24 +65,26 @@ const getNews = async (req, res, next) => {
   }
 };
 
-// @desc    Obtener una noticia por ID
-// @route   GET /api/news/:id
+// @desc    Get featured news (limit 3)
+// @route   GET /api/news/destacadas
 // @access  Public
-const getNewsById = async (req, res, next) => {
+exports.getFeaturedNews = async (req, res, next) => {
   try {
-    const news = await News.findById(req.params.id).populate('author', 'name email');
+    const news = await News.find({ isPublished: true, isFeatured: true })
+      .sort({ publishDate: -1 })
+      .limit(3);
 
-    if (!news) {
-      const error = new Error('Noticia no encontrada');
-      error.statusCode = 404;
-      throw error;
-    }
+    // Fallback: si no hay 3 destacadas, rellenar con las últimas publicadas
+    if (news.length < 3) {
+      const additionalNews = await News.find({
+        isPublished: true,
+        isFeatured: false,
+        _id: { $nin: news.map(n => n._id) }
+      })
+        .sort({ publishDate: -1 })
+        .limit(3 - news.length);
 
-    // Si la noticia no está publicada y el que la solicita no es admin
-    if (!news.isPublished && (!req.user || req.user.role !== 'admin')) {
-      const error = new Error('Noticia no encontrada o no publicada');
-      error.statusCode = 404;
-      throw error;
+      news.push(...additionalNews);
     }
 
     res.status(200).json({
@@ -95,47 +96,108 @@ const getNewsById = async (req, res, next) => {
   }
 };
 
-// @desc    Actualizar noticia
-// @route   PUT /api/news/:id
-// @access  Private/Admin
-const updateNews = async (req, res, next) => {
+// @desc    Get news by slug
+// @route   GET /api/news/:slug
+// @access  Public
+exports.getNewsBySlug = async (req, res, next) => {
   try {
-    let news = await News.findById(req.params.id);
+    const newsItem = await News.findOne({ slug: req.params.slug, isPublished: true });
 
-    if (!news) {
-      const error = new Error('Noticia no encontrada');
-      error.statusCode = 404;
-      throw error;
+    if (!newsItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Noticia no encontrada'
+      });
     }
 
-    news = await News.findByIdAndUpdate(req.params.id, req.body, {
+    res.status(200).json({
+      success: true,
+      data: newsItem
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get news by ID (Admin)
+// @route   GET /api/news/admin/:id
+// @access  Private/Admin
+exports.getNewsById = async (req, res, next) => {
+  try {
+    const newsItem = await News.findById(req.params.id);
+
+    if (!newsItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Noticia no encontrada'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: newsItem
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create new news article
+// @route   POST /api/news
+// @access  Private/Admin
+exports.createNews = async (req, res, next) => {
+  try {
+    const newsItem = await News.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      data: newsItem
+    });
+  } catch (error) {
+    console.error('ERROR EN CREATENEWS:', error.stack);
+    next(error);
+  }
+};
+
+// @desc    Update news article
+// @route   PUT /api/news/:id
+// @access  Private/Admin
+exports.updateNews = async (req, res, next) => {
+  try {
+    const newsItem = await News.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
     });
 
+    if (!newsItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Noticia no encontrada'
+      });
+    }
+
     res.status(200).json({
       success: true,
-      data: news
+      data: newsItem
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Eliminar noticia
+// @desc    Delete news article
 // @route   DELETE /api/news/:id
 // @access  Private/Admin
-const deleteNews = async (req, res, next) => {
+exports.deleteNews = async (req, res, next) => {
   try {
-    const news = await News.findById(req.params.id);
+    const newsItem = await News.findByIdAndDelete(req.params.id);
 
-    if (!news) {
-      const error = new Error('Noticia no encontrada');
-      error.statusCode = 404;
-      throw error;
+    if (!newsItem) {
+      return res.status(404).json({
+        success: false,
+        error: 'Noticia no encontrada'
+      });
     }
-
-    await news.deleteOne();
 
     res.status(200).json({
       success: true,
@@ -144,12 +206,4 @@ const deleteNews = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
-
-module.exports = {
-  createNews,
-  getNews,
-  getNewsById,
-  updateNews,
-  deleteNews
 };
