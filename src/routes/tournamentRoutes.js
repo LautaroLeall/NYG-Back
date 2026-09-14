@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getTournaments, 
-  getTournament, 
-  createTournament, 
-  updateTournament, 
+const {
+  getTournaments,
+  getTournament,
+  createTournament,
+  updateTournament,
   deleteTournament,
   getPointsRules,
   getTiebreakRules
