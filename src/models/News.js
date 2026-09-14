@@ -76,7 +76,7 @@ const newsSchema = new mongoose.Schema({
 });
 
 // Generar el slug automáticamente antes de guardar basado en el título
-newsSchema.pre('save', function() {
+newsSchema.pre('save', function () {
   // Solo generamos el slug si es un documento nuevo o el título ha sido modificado
   if (!this.isModified('title')) {
     return;
