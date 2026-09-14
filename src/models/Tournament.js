@@ -36,6 +36,10 @@ const tournamentSchema = new mongoose.Schema({
   isArchived: {
     type: Boolean,
     default: false
+  },
+  isFeatured: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

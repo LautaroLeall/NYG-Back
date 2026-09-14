@@ -31,7 +31,18 @@ exports.getTiebreakRules = async (req, res) => {
 // @access  Public
 exports.getTournaments = async (req, res) => {
   try {
-    const tournaments = await Tournament.find().populate('pointsRule tiebreakRule');
+    const { isFeatured, discipline } = req.query;
+    let query = {};
+    if (isFeatured !== undefined) {
+      query.isFeatured = isFeatured === 'true';
+    }
+    if (discipline) {
+      query.discipline = discipline;
+    }
+
+    const tournaments = await Tournament.find(query)
+      .populate('pointsRule tiebreakRule')
+      .sort({ createdAt: -1 });
     res.status(200).json(tournaments);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -58,7 +69,7 @@ exports.getTournament = async (req, res) => {
 // @access  Private
 exports.createTournament = async (req, res) => {
   try {
-    const { name, season, category, discipline } = req.body;
+    const { name, season, category, discipline, isFeatured } = req.body;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({ message: 'El nombre del torneo es obligatorio' });
@@ -78,6 +89,14 @@ exports.createTournament = async (req, res) => {
       return res.status(400).json({ message: `Ya existe un torneo con el nombre "${name.trim()}" para la temporada ${season} en la categoría ${category || 'Primera'}` });
     }
 
+    // Si este torneo es marcado como destacado, quitarle la marca a todos los demás de la misma disciplina
+    if (isFeatured) {
+      await Tournament.updateMany(
+        { discipline: discipline || 'Rugby' },
+        { isFeatured: false }
+      );
+    }
+
     const tournament = await Tournament.create(req.body);
     res.status(201).json(tournament);
   } catch (error) {
@@ -90,7 +109,7 @@ exports.createTournament = async (req, res) => {
 // @access  Private
 exports.updateTournament = async (req, res) => {
   try {
-    const { name, season, category, discipline } = req.body;
+    const { name, season, category, discipline, isFeatured } = req.body;
     let tournament = await Tournament.findById(req.params.id);
 
     if (!tournament) {
@@ -118,6 +137,15 @@ exports.updateTournament = async (req, res) => {
       if (existingTournament) {
         return res.status(400).json({ message: `Ya existe otro torneo con el nombre "${checkName}" para la temporada ${checkSeason} en la categoría ${checkCategory}` });
       }
+    }
+
+    // Si lo estamos marcando como destacado, destildar a los demás de su disciplina
+    if (isFeatured) {
+      const currentDiscipline = discipline !== undefined ? discipline : tournament.discipline;
+      await Tournament.updateMany(
+        { _id: { $ne: req.params.id }, discipline: currentDiscipline },
+        { isFeatured: false }
+      );
     }
 
     tournament = await Tournament.findByIdAndUpdate(req.params.id, req.body, {
