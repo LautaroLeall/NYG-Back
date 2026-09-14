@@ -1,6 +1,6 @@
-const Match = require('../models/Match');
-const Tournament = require('../models/Tournament');
-const Team = require('../models/Team');
+const Match = require("../models/Match");
+const Tournament = require("../models/Tournament");
+const Team = require("../models/Team");
 
 // @desc    Motor de cálculo de tabla de posiciones
 // @route   GET /api/standings/:tournamentId
@@ -11,11 +11,13 @@ exports.getStandings = async (req, res, next) => {
 
     // Obtener las reglas del torneo
     const tournament = await Tournament.findById(tournamentId)
-      .populate('pointsRule')
-      .populate('tiebreakRule');
+      .populate("pointsRule")
+      .populate("tiebreakRule");
 
     if (!tournament) {
-      return res.status(404).json({ success: false, error: 'Torneo no encontrado' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Torneo no encontrado" });
     }
 
     const { pointsRule, tiebreakRule } = tournament;
@@ -23,27 +25,29 @@ exports.getStandings = async (req, res, next) => {
     // Obtener todos los partidos finalizados de este torneo
     const matches = await Match.find({
       tournament: tournamentId,
-      status: 'Finalizado'
-    }).populate('homeTeam awayTeam');
+      status: "Finalizado",
+    }).populate("homeTeam awayTeam");
 
     // Inicializar la tabla (diccionario por ID de equipo)
     const standingsMap = {};
 
     // Preparar a todos los equipos participantes inscritos
     if (tournament.teams && tournament.teams.length > 0) {
-      tournament.teams.forEach(t => {
+      tournament.teams.forEach((t) => {
         standingsMap[t._id.toString()] = createEmptyTeamStat(t);
       });
     }
 
     // Calcular estadísticas base para cada partido
-    matches.forEach(match => {
+    matches.forEach((match) => {
       const homeId = match.homeTeam._id.toString();
       const awayId = match.awayTeam._id.toString();
 
       // Si por alguna razón el equipo no está en el mapa, lo inicializamos
-      if (!standingsMap[homeId]) standingsMap[homeId] = createEmptyTeamStat(match.homeTeam);
-      if (!standingsMap[awayId]) standingsMap[awayId] = createEmptyTeamStat(match.awayTeam);
+      if (!standingsMap[homeId])
+        standingsMap[homeId] = createEmptyTeamStat(match.homeTeam);
+      if (!standingsMap[awayId])
+        standingsMap[awayId] = createEmptyTeamStat(match.awayTeam);
 
       const homeStats = standingsMap[homeId];
       const awayStats = standingsMap[awayId];
@@ -80,16 +84,16 @@ exports.getStandings = async (req, res, next) => {
       }
 
       // Bonus Ofensivo
-      if (pointsRule.bonusOffensiveType === 'DIFFERENTIAL') {
-        if ((match.homeTries - match.awayTries) >= 3) {
+      if (pointsRule.bonusOffensiveType === "DIFFERENTIAL") {
+        if (match.homeTries - match.awayTries >= 3) {
           homeStats.bo++;
           homeStats.pts += pointsRule.bonusOffensivePoints;
         }
-        if ((match.awayTries - match.homeTries) >= 3) {
+        if (match.awayTries - match.homeTries >= 3) {
           awayStats.bo++;
           awayStats.pts += pointsRule.bonusOffensivePoints;
         }
-      } else if (pointsRule.bonusOffensiveType === 'ABSOLUTE') {
+      } else if (pointsRule.bonusOffensiveType === "ABSOLUTE") {
         if (match.homeTries >= 4) {
           homeStats.bo++;
           homeStats.pts += pointsRule.bonusOffensivePoints;
@@ -101,12 +105,18 @@ exports.getStandings = async (req, res, next) => {
       }
 
       // Bonus Defensivo
-      if (pointsRule.bonusDefensiveType === 'MARGIN') {
-        if (match.homeScore < match.awayScore && (match.awayScore - match.homeScore) <= pointsRule.bonusDefensiveMargin) {
+      if (pointsRule.bonusDefensiveType === "MARGIN") {
+        if (
+          match.homeScore < match.awayScore &&
+          match.awayScore - match.homeScore <= pointsRule.bonusDefensiveMargin
+        ) {
           homeStats.bd++;
           homeStats.pts += pointsRule.bonusDefensivePoints;
         }
-        if (match.awayScore < match.homeScore && (match.homeScore - match.awayScore) <= pointsRule.bonusDefensiveMargin) {
+        if (
+          match.awayScore < match.homeScore &&
+          match.homeScore - match.awayScore <= pointsRule.bonusDefensiveMargin
+        ) {
           awayStats.bd++;
           awayStats.pts += pointsRule.bonusDefensivePoints;
         }
@@ -114,7 +124,7 @@ exports.getStandings = async (req, res, next) => {
     });
 
     // Calcular diferencias
-    let standingsArray = Object.values(standingsMap).map(team => {
+    let standingsArray = Object.values(standingsMap).map((team) => {
       team.diff = team.pf - team.pa;
       return team;
     });
@@ -127,13 +137,19 @@ exports.getStandings = async (req, res, next) => {
       // 2. Si hay empate y hay reglas de desempate, iteramos (acá implementamos un subconjunto común)
       if (tiebreakRule && tiebreakRule.criteria) {
         for (let crit of tiebreakRule.criteria) {
-          if (crit === 'TOTAL_WINS' && b.won !== a.won) return b.won - a.won;
-          if (crit === 'POINTS_DIFFERENCE' && b.diff !== a.diff) return b.diff - a.diff;
-          if (crit === 'TRIES_DIFFERENCE' && (b.triesFor - b.triesAgainst) !== (a.triesFor - a.triesAgainst)) {
-            return (b.triesFor - b.triesAgainst) - (a.triesFor - a.triesAgainst);
+          if (crit === "TOTAL_WINS" && b.won !== a.won) return b.won - a.won;
+          if (crit === "POINTS_DIFFERENCE" && b.diff !== a.diff)
+            return b.diff - a.diff;
+          if (
+            crit === "TRIES_DIFFERENCE" &&
+            b.triesFor - b.triesAgainst !== a.triesFor - a.triesAgainst
+          ) {
+            return b.triesFor - b.triesAgainst - (a.triesFor - a.triesAgainst);
           }
-          if (crit === 'TOTAL_TRIES_SCORED' && b.triesFor !== a.triesFor) return b.triesFor - a.triesFor;
-          if (crit === 'TOTAL_POINTS_SCORED' && b.pf !== a.pf) return b.pf - a.pf;
+          if (crit === "TOTAL_TRIES_SCORED" && b.triesFor !== a.triesFor)
+            return b.triesFor - a.triesFor;
+          if (crit === "TOTAL_POINTS_SCORED" && b.pf !== a.pf)
+            return b.pf - a.pf;
         }
       }
 
@@ -152,9 +168,8 @@ exports.getStandings = async (req, res, next) => {
         id: tournament._id,
         name: tournament.name,
       },
-      data: standingsArray
+      data: standingsArray,
     });
-
   } catch (error) {
     next(error);
   }
@@ -177,6 +192,6 @@ function createEmptyTeamStat(teamObj) {
     triesAgainst: 0,
     bo: 0,
     bd: 0,
-    pts: 0
+    pts: 0,
   };
 }
