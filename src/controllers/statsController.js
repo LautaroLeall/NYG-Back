@@ -191,3 +191,145 @@ exports.getRankings = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Obtener alertas disciplinarias
+// @route   GET /api/stats/alerts
+// @access  Private/Admin
+exports.getAlerts = async (req, res, next) => {
+  try {
+    const stats = await MatchStats.aggregate([
+      {
+        $group: {
+          _id: '$player',
+          totalYellowCards: { $sum: '$yellowCards' },
+          totalRedCards: { $sum: '$redCards' }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { totalYellowCards: { $gte: 1 } },
+            { totalRedCards: { $gte: 1 } }
+          ]
+        }
+      },
+      { $sort: { totalRedCards: -1, totalYellowCards: -1 } }
+    ]);
+
+    await Player.populate(stats, { path: '_id', select: 'name category imageUrl' });
+
+    const formattedAlerts = stats.map(s => ({
+      player: s._id,
+      yellowCards: s.totalYellowCards,
+      redCards: s.totalRedCards
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedAlerts
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+// @desc    Carga unificada de Plantel y Línea de Tiempo (Autocalcula MatchStats)
+// @route   POST /api/matches/:id/unified-stats
+// @access  Private/Admin
+exports.saveUnifiedStats = async (req, res, next) => {
+  try {
+    const matchId = req.params.id;
+    const { roster, events } = req.body;
+
+    const match = await Match.findById(matchId);
+    if (!match) {
+      return res.status(404).json({ success: false, error: 'Partido no encontrado.' });
+    }
+
+    // 1. Update Match with roster and events
+    match.roster = roster || [];
+    match.events = events || [];
+    await match.save();
+
+    // 2. Auto-calculate MatchStats
+    // Delete stats for players no longer in the roster
+    const rosterPlayerIds = match.roster.map(r => r.player.toString());
+    await MatchStats.deleteMany({ match: matchId, player: { $nin: rosterPlayerIds } });
+
+    const operations = [];
+
+    for (const r of match.roster) {
+      const playerId = r.player.toString();
+      const isStarter = r.isStarter;
+
+      let tries = 0;
+      let conversions = 0;
+      let penalties = 0;
+      let drops = 0;
+      let yellowCards = 0;
+      let redCards = 0;
+      let minuteIn = isStarter ? 0 : null;
+      let minuteOut = 80; // Standard rugby match
+
+      // Process events for this player
+      for (const ev of match.events) {
+        // Did they score or get a card?
+        if (ev.team === 'NYG' && ev.player && ev.player.toString() === playerId) {
+          if (ev.type === 'Try') tries++;
+          if (ev.type === 'Conversión') conversions++;
+          if (ev.type === 'Penal') penalties++;
+          if (ev.type === 'Drop') drops++;
+          if (ev.type === 'Tarjeta Amarilla') yellowCards++;
+          if (ev.type === 'Tarjeta Roja') {
+            redCards++;
+            if (minuteOut === 80 || ev.minute < minuteOut) minuteOut = ev.minute;
+          }
+          // Entering the field
+          if (ev.type === 'Cambio') {
+            if (minuteIn === null || ev.minute < minuteIn) minuteIn = ev.minute;
+          }
+        }
+        // Leaving the field
+        if (ev.team === 'NYG' && ev.type === 'Cambio' && ev.playerOut && ev.playerOut.toString() === playerId) {
+          if (minuteOut === 80 || ev.minute < minuteOut) minuteOut = ev.minute;
+        }
+      }
+
+      let minutesPlayed = 0;
+      if (minuteIn !== null && minuteIn <= minuteOut) {
+        minutesPlayed = minuteOut - minuteIn;
+      }
+
+      operations.push({
+        updateOne: {
+          filter: { match: matchId, player: playerId },
+          update: {
+            $set: {
+              match: matchId,
+              player: playerId,
+              isStarter: isStarter,
+              minutesPlayed: minutesPlayed,
+              tries: tries,
+              conversions: conversions,
+              penalties: penalties,
+              drops: drops,
+              yellowCards: yellowCards,
+              redCards: redCards,
+            }
+          },
+          upsert: true
+        }
+      });
+    }
+
+    if (operations.length > 0) {
+      await MatchStats.bulkWrite(operations);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Ficha técnica guardada y estadísticas calculadas automáticamente.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
