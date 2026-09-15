@@ -52,7 +52,11 @@ const getMatches = async (req, res, next) => {
 // @access  Public
 const getMatchById = async (req, res, next) => {
   try {
-    const match = await Match.findById(req.params.id).populate('tournament homeTeam awayTeam');
+    const match = await Match.findById(req.params.id)
+      .populate('tournament homeTeam awayTeam')
+      .populate('events.player', 'name category imageUrl')
+      .populate('events.playerOut', 'name category imageUrl')
+      .populate('roster.player', 'name position category imageUrl');
 
     if (!match) {
       const error = new Error('Partido no encontrado');
@@ -160,6 +164,23 @@ const getLatestResults = async (req, res, next) => {
   }
 };
 
+// @desc    Obtener el timestamp del último partido actualizado
+// @route   GET /api/matches/latest-update
+// @access  Public
+const getLatestUpdate = async (req, res, next) => {
+  try {
+    const match = await Match.findOne().sort({ updatedAt: -1 }).select('updatedAt');
+    res.status(200).json({
+      success: true,
+      data: {
+        lastUpdate: match ? match.updatedAt : null
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createMatch,
   getMatches,
@@ -167,5 +188,6 @@ module.exports = {
   updateMatch,
   deleteMatch,
   getUpcomingMatches,
-  getLatestResults
+  getLatestResults,
+  getLatestUpdate
 };
