@@ -52,6 +52,8 @@ const teamRoutes = require('./routes/teamRoutes');
 const tournamentRoutes = require('./routes/tournamentRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const standingsRoutes = require('./routes/standingsRoutes');
+const contactRoutes = require('./routes/contactRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/news', newsRoutes);
@@ -62,6 +64,8 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/standings', standingsRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Servir la carpeta de imágenes estáticamente
 const path = require('path');
