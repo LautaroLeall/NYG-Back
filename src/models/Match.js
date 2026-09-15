@@ -40,7 +40,18 @@ const matchSchema = new mongoose.Schema({
   isHomeMatch: {
     type: Boolean,
     default: true,
-  }
+  },
+  roster: [{
+    player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', required: true },
+    isStarter: { type: Boolean, default: false }
+  }],
+  events: [{
+    team: { type: String, enum: ['NYG', 'RIVAL'], required: true },
+    type: { type: String, enum: ['Try', 'Conversión', 'Penal', 'Drop', 'Try Penal', 'Tarjeta Amarilla', 'Tarjeta Roja', 'Cambio'], required: true },
+    minute: { type: Number, required: true, min: 0, max: 120 },
+    player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' }, // Anotador o Jugador Entrante
+    playerOut: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' } // Jugador Saliente (solo cambios)
+  }]
 }, {
   timestamps: true
 });
