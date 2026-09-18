@@ -43,7 +43,8 @@ const matchSchema = new mongoose.Schema({
   },
   roster: [{
     player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', required: true },
-    isStarter: { type: Boolean, default: false }
+    isStarter: { type: Boolean, default: false },
+    shirtNumber: { type: Number }
   }],
   events: [{
     team: { type: String, enum: ['NYG', 'RIVAL'], required: true },
