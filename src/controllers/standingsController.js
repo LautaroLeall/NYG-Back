@@ -12,7 +12,8 @@ exports.getStandings = async (req, res, next) => {
     // Obtener las reglas del torneo
     const tournament = await Tournament.findById(tournamentId)
       .populate("pointsRule")
-      .populate("tiebreakRule");
+      .populate("tiebreakRule")
+      .populate("participants");
 
     if (!tournament) {
       return res
@@ -32,8 +33,8 @@ exports.getStandings = async (req, res, next) => {
     const standingsMap = {};
 
     // Preparar a todos los equipos participantes inscritos
-    if (tournament.teams && tournament.teams.length > 0) {
-      tournament.teams.forEach((t) => {
+    if (tournament.participants && tournament.participants.length > 0) {
+      tournament.participants.forEach((t) => {
         standingsMap[t._id.toString()] = createEmptyTeamStat(t);
       });
     }
