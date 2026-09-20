@@ -41,6 +41,11 @@ const matchSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  matchType: {
+    type: String,
+    enum: ['NYG', 'Generico'],
+    default: 'NYG',
+  },
   roster: [{
     player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', required: true },
     isStarter: { type: Boolean, default: false },
