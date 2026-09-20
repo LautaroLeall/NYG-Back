@@ -40,7 +40,11 @@ const tournamentSchema = new mongoose.Schema({
   isFeatured: {
     type: Boolean,
     default: false
-  }
+  },
+  participants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team'
+  }]
 }, {
   timestamps: true
 });
