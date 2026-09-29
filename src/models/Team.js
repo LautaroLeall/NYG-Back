@@ -21,12 +21,12 @@ const teamSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Primera', 'Intermedia', 'Pre-Intermedia', 'M19', 'M17', 'M16', 'M15', 'Infantiles'],
+    enum: ['Primera', 'Intermedia', 'Pre-Intermedia'],
     default: 'Primera'
   },
   discipline: {
     type: String,
-    enum: ['Rugby', 'Hockey'],
+    enum: ['Rugby'],
     default: 'Rugby'
   },
   isOwnTeam: {
