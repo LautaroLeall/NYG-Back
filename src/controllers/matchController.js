@@ -1,4 +1,5 @@
 const Match = require('../models/Match');
+const Team = require('../models/Team');
 
 // @desc    Crear un nuevo partido
 // @route   POST /api/matches
@@ -129,7 +130,16 @@ const deleteMatch = async (req, res, next) => {
 // @access  Public
 const getUpcomingMatches = async (req, res, next) => {
   try {
-    const matches = await Match.find({ status: 'Programado' })
+    const ownTeams = await Team.find({ isOwnTeam: true }).select('_id');
+    const ownTeamIds = ownTeams.map(t => t._id);
+
+    const matches = await Match.find({ 
+      status: 'Programado',
+      $or: [
+        { homeTeam: { $in: ownTeamIds } },
+        { awayTeam: { $in: ownTeamIds } }
+      ]
+    })
       .populate('tournament homeTeam awayTeam')
       .sort({ date: 1 })
       .limit(5);
@@ -149,7 +159,16 @@ const getUpcomingMatches = async (req, res, next) => {
 // @access  Public
 const getLatestResults = async (req, res, next) => {
   try {
-    const matches = await Match.find({ status: 'Finalizado' })
+    const ownTeams = await Team.find({ isOwnTeam: true }).select('_id');
+    const ownTeamIds = ownTeams.map(t => t._id);
+
+    const matches = await Match.find({ 
+      status: 'Finalizado',
+      $or: [
+        { homeTeam: { $in: ownTeamIds } },
+        { awayTeam: { $in: ownTeamIds } }
+      ]
+    })
       .populate('tournament homeTeam awayTeam')
       .sort({ date: -1 })
       .limit(5);
