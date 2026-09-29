@@ -31,13 +31,13 @@ const newsSchema = new mongoose.Schema({
     type: String,
     required: [true, 'La categoría es obligatoria'],
     enum: {
-      values: ['Institucional', 'Rugby', 'Hockey', 'Infantiles', 'Club'],
+      values: ['Institucional', 'Rugby'],
       message: '{VALUE} no es una categoría válida'
     }
   },
   discipline: {
     type: String,
-    enum: ['Rugby', 'Hockey'],
+    enum: ['Rugby'],
     default: null
   },
   author: {
